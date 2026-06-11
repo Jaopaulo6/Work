@@ -563,6 +563,89 @@ def get_line_items(conn, ncr_id):
 
 
 # ---------------------------------------------------------------------------
+# Dashboard + export (Phase 2)
+# ---------------------------------------------------------------------------
+
+# Flattened one-row-per-line-item view used both for the CSV export and as the
+# canonical Power BI query (matches the brief exactly).
+FLATTENED_QUERY = """
+SELECT
+    n.ncr_number,
+    n.date_created,
+    n.shop_order,
+    n.qty_affected,
+    n.operator_init,
+    n.notes,
+    n.bin_number,
+    n.status,
+    l.location_description,
+    s.source_description,
+    li.component_number,
+    li.designator,
+    li.quantity,
+    li.nc_code,
+    nc.nc_description,
+    li.cal_err_code,
+    r.date_updated         AS repair_date,
+    r.technician_init,
+    rc.root_cause_description,
+    r.root_cause_notes,
+    r.repair_passed,
+    d.disposition_description,
+    r.production_step
+FROM ncr n
+LEFT JOIN ref_location l    ON n.location_code = l.location_code
+LEFT JOIN ref_source s      ON n.source_id = s.source_id
+LEFT JOIN ncr_line_item li  ON n.ncr_id = li.ncr_id
+LEFT JOIN ref_nc_code nc    ON li.nc_code = nc.nc_code
+LEFT JOIN ncr_repair r      ON n.ncr_id = r.ncr_id
+LEFT JOIN ref_root_cause rc ON r.root_cause_id = rc.root_cause_id
+LEFT JOIN ref_disposition d ON r.disposition_code = d.disposition_code
+ORDER BY n.date_created DESC, n.ncr_number DESC
+"""
+
+
+def get_export_rows(conn):
+    """Return all rows of the flattened view (one row per line item) for CSV
+    export / Power BI."""
+    return conn.execute(FLATTENED_QUERY).fetchall()
+
+
+def get_dashboard_ncrs(conn, status=None, location_code=None,
+                       date_from=None, date_to=None, limit=50):
+    """Return up to `limit` NCR headers (most recent first) matching the
+    optional filters, with line-item and component counts per NCR."""
+    where = []
+    params = []
+    if status:
+        where.append("n.status = ?")
+        params.append(status)
+    if location_code:
+        where.append("n.location_code = ?")
+        params.append(location_code)
+    if date_from:
+        where.append("n.date_created >= ?")
+        params.append(date_from)
+    if date_to:
+        where.append("n.date_created <= ?")
+        params.append(date_to)
+
+    sql = """
+        SELECT n.ncr_number, n.date_created, n.shop_order, n.qty_affected,
+               n.operator_init, n.bin_number, n.status,
+               l.location_description,
+               (SELECT COUNT(*) FROM ncr_line_item li WHERE li.ncr_id = n.ncr_id) AS line_count
+        FROM ncr n
+        LEFT JOIN ref_location l ON n.location_code = l.location_code
+    """
+    if where:
+        sql += " WHERE " + " AND ".join(where)
+    sql += " ORDER BY n.date_created DESC, CAST(n.ncr_number AS INTEGER) DESC LIMIT ?"
+    params.append(limit)
+    return conn.execute(sql, params).fetchall()
+
+
+# ---------------------------------------------------------------------------
 # Run directly: build + verify
 # ---------------------------------------------------------------------------
 

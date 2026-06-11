@@ -12,8 +12,13 @@ Routes implemented in Step 2:
     GET  /success/<ncr_number> -> confirmation + (later) printable slip
 """
 
+import csv
+import io
+import os
+from datetime import date
+
 from flask import (
-    Flask, render_template, request, redirect, url_for, abort
+    Flask, render_template, request, redirect, url_for, abort, Response
 )
 
 import database as db
@@ -206,6 +211,97 @@ def repair_submit(ncr_number):
     }
     db.create_repair(ncr_id, repair)
     return redirect(url_for("repair_detail", ncr_number=ncr_number))
+
+
+# ---------------------------------------------------------------------------
+# Dashboard + detail + CSV export (Phase 2)
+# ---------------------------------------------------------------------------
+
+@app.route("/dashboard")
+def dashboard():
+    status = _clean(request.args.get("status"))
+    location_code = _clean(request.args.get("location_code"))
+    date_from = _clean(request.args.get("date_from"))
+    date_to = _clean(request.args.get("date_to"))
+
+    conn = db.get_connection()
+    try:
+        ncrs = db.get_dashboard_ncrs(
+            conn, status=status, location_code=location_code,
+            date_from=date_from, date_to=date_to,
+        )
+        locations = db.get_locations(conn)
+    finally:
+        conn.close()
+
+    return render_template(
+        "dashboard.html",
+        ncrs=ncrs,
+        locations=locations,
+        statuses=["Open", "In Repair", "Closed"],
+        # Echo filters back so the form stays populated.
+        f_status=status, f_location=location_code,
+        f_date_from=date_from, f_date_to=date_to,
+    )
+
+
+@app.route("/ncr/<ncr_number>")
+def ncr_detail(ncr_number):
+    """Read-only detail view for one NCR (operator report + repair record)."""
+    conn = db.get_connection()
+    try:
+        ncr = db.get_ncr_by_number(conn, ncr_number)
+        if ncr is None:
+            abort(404)
+        line_items = db.get_line_items(conn, ncr["ncr_id"])
+        repair = db.get_repair(conn, ncr["ncr_id"])
+        return render_template(
+            "detail.html", ncr=ncr, line_items=line_items, repair=repair,
+        )
+    finally:
+        conn.close()
+
+
+@app.route("/export/csv")
+def export_csv():
+    """Stream the flattened NCR export as a CSV download. Also writes a copy to
+    export/ncr_export.csv so a scheduled Power BI pickup can read it from disk."""
+    conn = db.get_connection()
+    try:
+        rows = db.get_export_rows(conn)
+    finally:
+        conn.close()
+
+    # Column order = the flattened query's select list.
+    headers = [
+        "ncr_number", "date_created", "shop_order", "qty_affected",
+        "operator_init", "notes", "bin_number", "status",
+        "location_description", "source_description",
+        "component_number", "designator", "quantity", "nc_code", "nc_description",
+        "cal_err_code", "repair_date", "technician_init",
+        "root_cause_description", "root_cause_notes", "repair_passed",
+        "disposition_description", "production_step",
+    ]
+
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(headers)
+    for row in rows:
+        writer.writerow([row[h] for h in headers])
+    csv_text = buf.getvalue()
+
+    # Persist a copy to disk for Option A (timed pickup) in the brief.
+    export_dir = os.path.join(db.BASE_DIR, "export")
+    os.makedirs(export_dir, exist_ok=True)
+    with open(os.path.join(export_dir, "ncr_export.csv"), "w", newline="") as fh:
+        fh.write(csv_text)
+
+    filename = "ncr_export_%s.csv" % date.today().isoformat()
+    return Response(
+        csv_text,
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=%s" % filename},
+    )
 
 
 if __name__ == "__main__":

@@ -290,6 +290,38 @@ textarea:focus {
     margin-bottom: 1rem;
 }
 
+/* ---- Dashboard ---- */
+.dash-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+.filter-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    align-items: end;
+}
+.filter-actions { display: flex; gap: 0.75rem; align-items: end; }
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 1rem;
+}
+.data-table th,
+.data-table td {
+    border: 1px solid var(--line);
+    padding: 0.55rem 0.7rem;
+    text-align: left;
+}
+.data-table th { background: #f3f7fa; font-size: 0.95rem; }
+.data-table tbody tr:nth-child(even) { background: #fafcfd; }
+.data-table a { color: var(--brand); font-weight: 700; text-decoration: none; }
+.data-table a:hover { text-decoration: underline; }
+
 /* ==========================================================================
    Print — the slip prints as a clean half-page bin tag.
    Goal: huge NCR number (written on the bin), plus date/location/bin/parts.
