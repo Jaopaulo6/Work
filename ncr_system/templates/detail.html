@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}NCR {{ ncr.ncr_number }}{% endblock %}
+
+{% block content %}
+<div class="dash-head">
+    <h1>NCR {{ ncr.ncr_number }}</h1>
+    <span class="status-badge status-{{ ncr.status | replace(' ', '') | lower }}">{{ ncr.status }}</span>
+</div>
+
+<section class="card">
+    <h2>Operator Report</h2>
+    <table class="slip-details">
+        <tr><th>Date</th><td>{{ ncr.date_created }}</td></tr>
+        <tr><th>Location</th><td>{{ ncr.location_description or ncr.location_code or '—' }}</td></tr>
+        <tr><th>Source</th><td>{{ ncr.source_description or '—' }}</td></tr>
+        <tr><th>Shop Order</th><td>{{ ncr.shop_order or '—' }}</td></tr>
+        <tr><th>Bin Number</th><td>{{ ncr.bin_number or '—' }}</td></tr>
+        <tr><th>Qty Affected</th><td>{{ ncr.qty_affected if ncr.qty_affected is not none else '—' }}</td></tr>
+        <tr><th>Operator</th><td>{{ ncr.operator_init }}</td></tr>
+    </table>
+
+    {% if ncr.notes %}
+    <h3 class="slip-section-title">Operator Notes</h3>
+    <p class="slip-notes">{{ ncr.notes }}</p>
+    {% endif %}
+
+    <h3 class="slip-section-title">Components Flagged</h3>
+    {% if line_items %}
+    <table class="slip-components">
+        <thead><tr><th>Component</th><th>Designator</th><th>Qty</th><th>NC Code</th><th>Cal Err</th></tr></thead>
+        <tbody>
+            {% for li in line_items %}
+            <tr>
+                <td>{{ li.component_number or '—' }}</td>
+                <td>{{ li.designator or '—' }}</td>
+                <td>{{ li.quantity if li.quantity is not none else '—' }}</td>
+                <td>{{ li.nc_code or '—' }}{% if li.nc_description %} — {{ li.nc_description }}{% endif %}</td>
+                <td>{{ li.cal_err_code or '—' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="muted">No components recorded.</p>
+    {% endif %}
+</section>
+
+<section class="card">
+    <h2>Repair Record</h2>
+    {% if repair %}
+    <table class="slip-details">
+        <tr><th>Date Updated</th><td>{{ repair.date_updated }}</td></tr>
+        <tr><th>Technician</th><td>{{ repair.technician_init }}</td></tr>
+        <tr><th>Root Cause</th><td>{{ repair.root_cause_description or '—' }}</td></tr>
+        <tr><th>Root Cause Notes</th><td>{{ repair.root_cause_notes or '—' }}</td></tr>
+        <tr><th>Repair Passed</th><td>
+            {% if repair.repair_passed == 1 %}Pass{% elif repair.repair_passed == 0 %}Fail{% else %}—{% endif %}
+        </td></tr>
+        <tr><th>Disposition</th><td>{{ repair.disposition_description or '—' }}</td></tr>
+        <tr><th>Return to Step</th><td>{{ repair.production_step or '—' }}</td></tr>
+    </table>
+    {% else %}
+    <p class="muted">No repair record yet — this NCR has not been completed by a technician.</p>
+    {% endif %}
+</section>
+
+<div class="slip-actions">
+    <a href="{{ url_for('dashboard') }}" class="btn btn-new">Back to Dashboard</a>
+    {% if not repair %}
+    <a href="{{ url_for('repair_detail', ncr_number=ncr.ncr_number) }}" class="btn btn-print">Open in Repair</a>
+    {% endif %}
+</div>
+{% endblock %}

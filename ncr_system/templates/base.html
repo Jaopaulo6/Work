@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}NCR System{% endblock %} — Tekmar</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header class="site-header">
+        <div class="brand">
+            <span class="brand-name">Tekmar</span>
+            <span class="brand-sub">NCR Tracking</span>
+        </div>
+        <nav class="site-nav">
+            <a href="{{ url_for('operator_form') }}">New NCR</a>
+            <a href="{{ url_for('repair_lookup') }}">Repair Lookup</a>
+            <a href="{{ url_for('dashboard') }}">Dashboard</a>
+        </nav>
+    </header>
+
+    <main class="content">
+        {% block content %}{% endblock %}
+    </main>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

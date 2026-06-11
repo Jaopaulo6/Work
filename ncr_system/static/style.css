@@ -1,0 +1,382 @@
+/* ==========================================================================
+   NCR System — floor-friendly styles
+   Principles: min 16px font, >=48px tall buttons/inputs, high contrast,
+   readable from ~50cm. Vanilla CSS, no frameworks.
+   ========================================================================== */
+
+:root {
+    --ink: #15202b;          /* dark text */
+    --muted: #5a6b7b;
+    --line: #cfd8e0;
+    --bg: #eef2f5;
+    --card: #ffffff;
+    --brand: #00558c;        /* Tekmar-ish blue */
+    --green: #1f8b3a;
+    --green-dark: #166b2c;
+    --blue: #1565c0;
+    --red: #b3261e;
+    --focus: #ffb300;
+}
+
+* { box-sizing: border-box; }
+
+html { font-size: 16px; }
+
+body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    font-size: 1rem;
+    line-height: 1.4;
+    color: var(--ink);
+    background: var(--bg);
+}
+
+/* ---- Header / nav ---- */
+.site-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    background: var(--brand);
+    color: #fff;
+    padding: 0.75rem 1.25rem;
+}
+.brand-name { font-size: 1.5rem; font-weight: 800; letter-spacing: 0.5px; }
+.brand-sub { font-size: 1rem; opacity: 0.85; margin-left: 0.5rem; }
+.site-nav a {
+    color: #fff;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 1.05rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+}
+.site-nav a:hover { background: rgba(255, 255, 255, 0.15); }
+
+/* ---- Layout ---- */
+.content {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 1.25rem;
+}
+h1 { font-size: 1.9rem; margin: 0.25rem 0 1rem; }
+h2 { font-size: 1.3rem; margin: 0 0 1rem; }
+
+.card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 1.25rem;
+    margin-bottom: 1.25rem;
+}
+
+.muted { color: var(--muted); font-weight: 400; }
+
+/* ---- Form fields ---- */
+.field-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem;
+}
+.field { display: flex; flex-direction: column; gap: 0.35rem; }
+.field-wide { grid-column: 1 / -1; margin-top: 1rem; }
+.field-label { font-weight: 700; font-size: 1.05rem; }
+
+input[type="text"],
+input[type="number"],
+input[type="date"],
+select,
+textarea {
+    font-size: 1.15rem;
+    padding: 0.7rem 0.75rem;
+    min-height: 48px;
+    border: 2px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--ink);
+    width: 100%;
+}
+textarea { min-height: 80px; resize: vertical; }
+select[size] { min-height: auto; }
+
+input:focus,
+select:focus,
+textarea:focus {
+    outline: 3px solid var(--focus);
+    outline-offset: 1px;
+    border-color: var(--brand);
+}
+.uppercase { text-transform: uppercase; }
+
+/* ---- Line items ---- */
+.line-item {
+    border: 1px dashed var(--line);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background: #fafcfd;
+}
+.line-item-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+}
+.line-item-title { font-weight: 700; font-size: 1.1rem; }
+.nc-filter { margin-bottom: 0.4rem; }
+.nc-select { font-size: 1.05rem; }
+
+/* ---- Buttons ---- */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    padding: 0.7rem 1.25rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    text-decoration: none;
+}
+.btn:focus { outline: 3px solid var(--focus); outline-offset: 2px; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-add {
+    background: #e3eef7;
+    color: var(--brand);
+    border: 2px solid var(--brand);
+}
+.btn-remove {
+    background: transparent;
+    color: var(--red);
+    border: 2px solid var(--red);
+    min-height: 40px;
+    padding: 0.4rem 0.9rem;
+    font-size: 1rem;
+}
+.btn-submit {
+    background: var(--green);
+    color: #fff;
+    width: 100%;
+    font-size: 1.4rem;
+    min-height: 60px;
+    margin-top: 0.5rem;
+}
+.btn-submit:hover { background: var(--green-dark); }
+
+.btn-print { background: var(--blue); color: #fff; }
+.btn-new { background: #e3eef7; color: var(--brand); border: 2px solid var(--brand); }
+
+/* ---- Success / slip ---- */
+.slip {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 1.5rem;
+    max-width: 640px;
+    margin: 0 auto 1.25rem;
+}
+.slip-banner {
+    background: #e6f4ea;
+    color: var(--green-dark);
+    border: 1px solid var(--green);
+    border-radius: 8px;
+    padding: 0.6rem 1rem;
+    font-weight: 700;
+    margin-bottom: 1.25rem;
+    text-align: center;
+}
+.slip-number-block {
+    text-align: center;
+    border: 3px solid var(--ink);
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 1.25rem;
+}
+.slip-number-label {
+    display: block;
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+}
+.slip-number {
+    display: block;
+    font-size: 3.4rem;
+    font-weight: 800;
+    line-height: 1.1;
+}
+.slip-details,
+.slip-components {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+}
+.slip-details th {
+    text-align: left;
+    width: 40%;
+    padding: 0.4rem 0.6rem;
+    color: var(--muted);
+    font-weight: 700;
+    vertical-align: top;
+}
+.slip-details td { padding: 0.4rem 0.6rem; font-weight: 600; }
+.slip-section-title { font-size: 1.15rem; margin: 1rem 0 0.5rem; }
+.slip-components th,
+.slip-components td {
+    border: 1px solid var(--line);
+    padding: 0.45rem 0.6rem;
+    text-align: left;
+    font-size: 1rem;
+}
+.slip-components th { background: #f3f7fa; }
+.slip-notes { white-space: pre-wrap; }
+
+.slip-actions {
+    display: flex;
+    gap: 1rem;
+    max-width: 640px;
+    margin: 0 auto;
+}
+.slip-actions .btn { flex: 1; }
+
+/* ---- Repair page ---- */
+.record-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+.record-head h2 { margin: 0; }
+
+.status-badge {
+    display: inline-block;
+    padding: 0.3rem 0.8rem;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    border: 2px solid currentColor;
+}
+.status-open      { color: #8a6d00; background: #fff7e0; }
+.status-inrepair  { color: var(--blue); background: #e6f0fb; }
+.status-closed    { color: var(--green-dark); background: #e6f4ea; }
+
+.lookup-form .btn-submit { margin-top: 1rem; }
+
+.radio-row { display: flex; gap: 1rem; align-items: center; min-height: 48px; }
+.radio {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 1.15rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.radio input { width: 1.4rem; height: 1.4rem; min-height: auto; }
+
+.btn-submit-blue { background: var(--blue); }
+.btn-submit-blue:hover { background: #0d47a1; }
+
+.error-box {
+    background: #fdecea;
+    color: var(--red);
+    border: 1px solid var(--red);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+/* ---- Dashboard ---- */
+.dash-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+.filter-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    align-items: end;
+}
+.filter-actions { display: flex; gap: 0.75rem; align-items: end; }
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 1rem;
+}
+.data-table th,
+.data-table td {
+    border: 1px solid var(--line);
+    padding: 0.55rem 0.7rem;
+    text-align: left;
+}
+.data-table th { background: #f3f7fa; font-size: 0.95rem; }
+.data-table tbody tr:nth-child(even) { background: #fafcfd; }
+.data-table a { color: var(--brand); font-weight: 700; text-decoration: none; }
+.data-table a:hover { text-decoration: underline; }
+
+/* ==========================================================================
+   Print — the slip prints as a clean half-page bin tag.
+   Goal: huge NCR number (written on the bin), plus date/location/bin/parts.
+   Everything chrome-like (header, nav, buttons, banner) is hidden.
+   ========================================================================== */
+@media print {
+    /* Half of US Letter / A4 height; printer trims the rest. */
+    @page { size: auto; margin: 12mm; }
+
+    .no-print { display: none !important; }
+    .site-header,
+    .site-nav,
+    .slip-banner,
+    .slip-actions { display: none !important; }
+
+    html { font-size: 12pt; }
+    body { background: #fff; color: #000; }
+    .content { max-width: none; margin: 0; padding: 0; }
+
+    /* The slip itself: no card chrome, sits at top-left of the page. */
+    .slip {
+        border: none;
+        border-radius: 0;
+        padding: 0;
+        margin: 0;
+        max-width: none;
+    }
+
+    /* NCR number: the whole point of the slip — make it unmissable. */
+    .slip-number-block {
+        border: 3pt solid #000;
+        border-radius: 0;
+        padding: 6pt 10pt;
+        margin-bottom: 10pt;
+    }
+    .slip-number-label { font-size: 10pt; color: #000; }
+    .slip-number { font-size: 48pt; line-height: 1; }
+
+    .slip-details th { color: #000; padding: 2pt 6pt; }
+    .slip-details td { padding: 2pt 6pt; }
+    .slip-section-title { font-size: 12pt; margin: 8pt 0 4pt; }
+
+    /* Crisp 1pt borders print better than light screen greys. */
+    .slip-components th,
+    .slip-components td {
+        border: 1pt solid #000;
+        padding: 3pt 6pt;
+        font-size: 10pt;
+    }
+    .slip-components th { background: #fff; }
+
+    /* Keep the slip from breaking awkwardly across two pages. */
+    .slip-number-block,
+    .slip-details,
+    .slip-components { page-break-inside: avoid; }
+
+    a[href]:after { content: ""; }  /* suppress URL printing */
+}

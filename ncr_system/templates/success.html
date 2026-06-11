@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}NCR {{ ncr.ncr_number }}{% endblock %}
+
+{% block content %}
+<div class="slip">
+    <div class="slip-banner no-print">NCR submitted successfully</div>
+
+    <div class="slip-number-block">
+        <span class="slip-number-label">NCR Number</span>
+        <span class="slip-number">{{ ncr.ncr_number }}</span>
+    </div>
+
+    <table class="slip-details">
+        <tr><th>Date</th><td>{{ ncr.date_created }}</td></tr>
+        <tr><th>Location</th><td>{{ ncr.location_description or ncr.location_code or '—' }}</td></tr>
+        <tr><th>Shop Order</th><td>{{ ncr.shop_order or '—' }}</td></tr>
+        <tr><th>Bin Number</th><td>{{ ncr.bin_number or '—' }}</td></tr>
+        <tr><th>Qty Affected</th><td>{{ ncr.qty_affected if ncr.qty_affected is not none else '—' }}</td></tr>
+        <tr><th>Operator</th><td>{{ ncr.operator_init }}</td></tr>
+    </table>
+
+    <h3 class="slip-section-title">Components Flagged</h3>
+    {% if line_items %}
+    <table class="slip-components">
+        <thead>
+            <tr><th>Component</th><th>Designator</th><th>Qty</th><th>NC Code</th></tr>
+        </thead>
+        <tbody>
+            {% for li in line_items %}
+            <tr>
+                <td>{{ li.component_number or '—' }}</td>
+                <td>{{ li.designator or '—' }}</td>
+                <td>{{ li.quantity if li.quantity is not none else '—' }}</td>
+                <td>{{ li.nc_code or '—' }}{% if li.nc_description %} — {{ li.nc_description }}{% endif %}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="muted">No components recorded.</p>
+    {% endif %}
+
+    {% if ncr.notes %}
+    <h3 class="slip-section-title">Notes</h3>
+    <p class="slip-notes">{{ ncr.notes }}</p>
+    {% endif %}
+</div>
+
+<div class="slip-actions no-print">
+    <button type="button" class="btn btn-print" onclick="window.print()">Print This Page</button>
+    <a href="{{ url_for('operator_form') }}" class="btn btn-new">New NCR</a>
+</div>
+{% endblock %}

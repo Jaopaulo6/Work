@@ -1,0 +1,12 @@
+# SQLite database is auto-created by database.py — do not commit
+ncr_system/ncr.db
+ncr_system/ncr.db-journal
+
+# Generated CSV exports
+ncr_system/export/*.csv
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/

@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% block title %}New NCR{% endblock %}
+
+{% block content %}
+<h1>New Non-Conformance Report</h1>
+
+<form method="POST" action="{{ url_for('operator_submit') }}" class="ncr-form" id="ncr-form">
+
+    <section class="card">
+        <h2>Header</h2>
+
+        <div class="field-grid">
+            <label class="field">
+                <span class="field-label">Date</span>
+                <input type="date" name="date_created" id="date_created" required>
+            </label>
+
+            <label class="field">
+                <span class="field-label">Shop Order</span>
+                <input type="text" name="shop_order" autocomplete="off">
+            </label>
+
+            <label class="field">
+                <span class="field-label">Location</span>
+                <select name="location_code">
+                    <option value="">— Select location —</option>
+                    {% for loc in locations %}
+                    <option value="{{ loc.location_code }}">{{ loc.location_code }} — {{ loc.location_description }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+
+            <label class="field">
+                <span class="field-label">Source</span>
+                <select name="source_id">
+                    <option value="">— Select source —</option>
+                    {% for s in sources %}
+                    <option value="{{ s.source_id }}">{{ s.source_description }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+
+            <label class="field">
+                <span class="field-label">Bin Number</span>
+                <input type="text" name="bin_number" autocomplete="off" placeholder="e.g. B-12">
+            </label>
+
+            <label class="field">
+                <span class="field-label">Qty Affected</span>
+                <input type="number" name="qty_affected" min="0" inputmode="numeric">
+            </label>
+
+            <label class="field">
+                <span class="field-label">Operator Initials</span>
+                <input type="text" name="operator_init" maxlength="4" required
+                       autocomplete="off" class="uppercase" placeholder="ABC">
+            </label>
+        </div>
+
+        <label class="field field-wide">
+            <span class="field-label">Notes <span class="muted">(optional)</span></span>
+            <textarea name="notes" rows="3"></textarea>
+        </label>
+    </section>
+
+    <section class="card">
+        <h2>Components / Defects</h2>
+
+        <div id="line-items">
+            <!-- Rows injected by JS; first row added on load -->
+        </div>
+
+        <button type="button" class="btn btn-add" id="add-component">+ Add Component</button>
+    </section>
+
+    <button type="submit" class="btn btn-submit">Submit NCR</button>
+</form>
+
+<!-- Template for one line-item row, cloned by JS. -->
+<template id="line-item-template">
+    <div class="line-item">
+        <div class="line-item-header">
+            <span class="line-item-title">Component <span class="row-num"></span></span>
+            <button type="button" class="btn btn-remove" title="Remove this component">Remove</button>
+        </div>
+        <div class="field-grid">
+            <label class="field">
+                <span class="field-label">Component Number</span>
+                <input type="text" name="component_number" autocomplete="off">
+            </label>
+            <label class="field">
+                <span class="field-label">Designator</span>
+                <input type="text" name="designator" autocomplete="off" placeholder="e.g. R12, U4">
+            </label>
+            <label class="field">
+                <span class="field-label">Quantity</span>
+                <input type="number" name="quantity" min="0" inputmode="numeric">
+            </label>
+            <label class="field">
+                <span class="field-label">Cal Err Code</span>
+                <input type="text" name="cal_err_code" autocomplete="off">
+            </label>
+            <label class="field field-wide">
+                <span class="field-label">NC Code</span>
+                <input type="text" class="nc-filter" placeholder="Type to filter… e.g. SOLDER" autocomplete="off">
+                <select name="nc_code" class="nc-select" size="6">
+                    <option value="">— Select NC code —</option>
+                    {% for nc in nc_codes %}
+                    <option value="{{ nc.nc_code }}">{{ nc.nc_code }} — {{ nc.nc_description }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+        </div>
+    </div>
+</template>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    // Default the date field to today (local time).
+    var dateInput = document.getElementById("date_created");
+    if (dateInput && !dateInput.value) {
+        var now = new Date();
+        var local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+        dateInput.value = local.toISOString().slice(0, 10);
+    }
+
+    // Force operator initials to uppercase as the user types.
+    var initials = document.querySelector('input[name="operator_init"]');
+    if (initials) {
+        initials.addEventListener("input", function () {
+            this.value = this.value.toUpperCase();
+        });
+    }
+
+    var container = document.getElementById("line-items");
+    var template = document.getElementById("line-item-template");
+    var MAX_ROWS = 5;
+
+    function renumber() {
+        var rows = container.querySelectorAll(".line-item");
+        rows.forEach(function (row, i) {
+            row.querySelector(".row-num").textContent = i + 1;
+            // Hide the Remove button when only one row remains.
+            row.querySelector(".btn-remove").style.display =
+                rows.length > 1 ? "" : "none";
+        });
+        document.getElementById("add-component").disabled = rows.length >= MAX_ROWS;
+    }
+
+    // Live filter: typing in the .nc-filter narrows that row's <select> options.
+    function wireFilter(row) {
+        var filter = row.querySelector(".nc-filter");
+        var select = row.querySelector(".nc-select");
+        filter.addEventListener("input", function () {
+            var q = this.value.trim().toUpperCase();
+            Array.prototype.forEach.call(select.options, function (opt) {
+                if (opt.value === "") return; // keep the placeholder
+                opt.hidden = q !== "" && opt.text.toUpperCase().indexOf(q) === -1;
+            });
+        });
+    }
+
+    function addRow() {
+        var rows = container.querySelectorAll(".line-item");
+        if (rows.length >= MAX_ROWS) return;
+        var frag = template.content.cloneNode(true);
+        var row = frag.querySelector(".line-item");
+        row.querySelector(".btn-remove").addEventListener("click", function () {
+            row.remove();
+            renumber();
+        });
+        wireFilter(row);
+        container.appendChild(frag);
+        renumber();
+    }
+
+    document.getElementById("add-component").addEventListener("click", addRow);
+
+    // Start with one row.
+    addRow();
+})();
+</script>
+{% endblock %}
