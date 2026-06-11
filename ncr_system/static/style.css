@@ -242,7 +242,61 @@ textarea:focus {
 }
 .slip-actions .btn { flex: 1; }
 
-/* ---- Print (refined in Step 3) ---- */
+/* ==========================================================================
+   Print — the slip prints as a clean half-page bin tag.
+   Goal: huge NCR number (written on the bin), plus date/location/bin/parts.
+   Everything chrome-like (header, nav, buttons, banner) is hidden.
+   ========================================================================== */
 @media print {
+    /* Half of US Letter / A4 height; printer trims the rest. */
+    @page { size: auto; margin: 12mm; }
+
     .no-print { display: none !important; }
+    .site-header,
+    .site-nav,
+    .slip-banner,
+    .slip-actions { display: none !important; }
+
+    html { font-size: 12pt; }
+    body { background: #fff; color: #000; }
+    .content { max-width: none; margin: 0; padding: 0; }
+
+    /* The slip itself: no card chrome, sits at top-left of the page. */
+    .slip {
+        border: none;
+        border-radius: 0;
+        padding: 0;
+        margin: 0;
+        max-width: none;
+    }
+
+    /* NCR number: the whole point of the slip — make it unmissable. */
+    .slip-number-block {
+        border: 3pt solid #000;
+        border-radius: 0;
+        padding: 6pt 10pt;
+        margin-bottom: 10pt;
+    }
+    .slip-number-label { font-size: 10pt; color: #000; }
+    .slip-number { font-size: 48pt; line-height: 1; }
+
+    .slip-details th { color: #000; padding: 2pt 6pt; }
+    .slip-details td { padding: 2pt 6pt; }
+    .slip-section-title { font-size: 12pt; margin: 8pt 0 4pt; }
+
+    /* Crisp 1pt borders print better than light screen greys. */
+    .slip-components th,
+    .slip-components td {
+        border: 1pt solid #000;
+        padding: 3pt 6pt;
+        font-size: 10pt;
+    }
+    .slip-components th { background: #fff; }
+
+    /* Keep the slip from breaking awkwardly across two pages. */
+    .slip-number-block,
+    .slip-details,
+    .slip-components { page-break-inside: avoid; }
+
+    a[href]:after { content: ""; }  /* suppress URL printing */
 }
