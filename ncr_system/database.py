@@ -354,6 +354,130 @@ def get_next_ncr_number(conn):
 
 
 # ---------------------------------------------------------------------------
+# Reference-data getters (for populating dropdowns)
+# ---------------------------------------------------------------------------
+
+def get_locations(conn):
+    """Active locations ordered by code, for the Location dropdown."""
+    return conn.execute(
+        "SELECT location_code, location_description FROM ref_location "
+        "WHERE validity = 'Active' ORDER BY location_code"
+    ).fetchall()
+
+
+def get_sources(conn):
+    """Active sources ordered by id, for the Source dropdown."""
+    return conn.execute(
+        "SELECT source_id, source_description FROM ref_source "
+        "WHERE validity = 'Active' ORDER BY source_id"
+    ).fetchall()
+
+
+def get_nc_codes(conn):
+    """Active NC codes ordered by code, for the (searchable) NC Code dropdown."""
+    return conn.execute(
+        "SELECT nc_code, nc_description FROM ref_nc_code "
+        "WHERE validity = 'Active' ORDER BY nc_code"
+    ).fetchall()
+
+
+# ---------------------------------------------------------------------------
+# NCR creation
+# ---------------------------------------------------------------------------
+
+def create_ncr(header, line_items):
+    """Insert one NCR header plus its line items inside a single transaction.
+
+    header: dict with keys date_created, shop_order, qty_affected,
+            operator_init, notes, bin_number, source_id, location_code.
+    line_items: list of dicts with keys component_number, designator,
+            quantity, nc_code, cal_err_code.
+
+    Returns the generated ncr_number (str). Status defaults to 'Open'.
+    """
+    conn = get_connection()
+    try:
+        ncr_number = get_next_ncr_number(conn)
+        cur = conn.execute(
+            """
+            INSERT INTO ncr (
+                ncr_number, date_created, shop_order, qty_affected,
+                operator_init, notes, bin_number, source_id, location_code, status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Open')
+            """,
+            (
+                ncr_number,
+                header.get("date_created"),
+                header.get("shop_order"),
+                header.get("qty_affected"),
+                header.get("operator_init"),
+                header.get("notes"),
+                header.get("bin_number"),
+                header.get("source_id"),
+                header.get("location_code"),
+            ),
+        )
+        ncr_id = cur.lastrowid
+
+        rows = [
+            (
+                ncr_id,
+                li.get("component_number"),
+                li.get("designator"),
+                li.get("quantity"),
+                li.get("nc_code"),
+                li.get("cal_err_code"),
+            )
+            for li in line_items
+        ]
+        if rows:
+            conn.executemany(
+                """
+                INSERT INTO ncr_line_item (
+                    ncr_id, component_number, designator, quantity, nc_code, cal_err_code
+                ) VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                rows,
+            )
+        conn.commit()
+        return ncr_number
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def get_ncr_by_number(conn, ncr_number):
+    """Return the NCR header (joined to location/source descriptions) for a
+    given ncr_number, or None if not found."""
+    return conn.execute(
+        """
+        SELECT n.*, l.location_description, s.source_description
+        FROM ncr n
+        LEFT JOIN ref_location l ON n.location_code = l.location_code
+        LEFT JOIN ref_source s   ON n.source_id = s.source_id
+        WHERE n.ncr_number = ?
+        """,
+        (ncr_number,),
+    ).fetchone()
+
+
+def get_line_items(conn, ncr_id):
+    """Return all line items (joined to NC code description) for an NCR."""
+    return conn.execute(
+        """
+        SELECT li.*, nc.nc_description
+        FROM ncr_line_item li
+        LEFT JOIN ref_nc_code nc ON li.nc_code = nc.nc_code
+        WHERE li.ncr_id = ?
+        ORDER BY li.line_id
+        """,
+        (ncr_id,),
+    ).fetchall()
+
+
+# ---------------------------------------------------------------------------
 # Run directly: build + verify
 # ---------------------------------------------------------------------------
 
