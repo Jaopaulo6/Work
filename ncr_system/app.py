@@ -122,6 +122,92 @@ def success(ncr_number):
         conn.close()
 
 
+# ---------------------------------------------------------------------------
+# Repair tech routes
+# ---------------------------------------------------------------------------
+
+@app.route("/repair", methods=["GET"])
+def repair_lookup():
+    """Lookup form. If ?ncr_number=... is supplied (from the search box),
+    redirect to the detail route; otherwise just show the search box."""
+    ncr_number = _clean(request.args.get("ncr_number"))
+    if ncr_number:
+        return redirect(url_for("repair_detail", ncr_number=ncr_number))
+    return render_template("repair.html", ncr=None)
+
+
+@app.route("/repair/<ncr_number>", methods=["GET"])
+def repair_detail(ncr_number):
+    """Show the operator's read-only report plus the repair entry form.
+    If a repair already exists, show it read-only instead of the form."""
+    conn = db.get_connection()
+    try:
+        ncr = db.get_ncr_by_number(conn, ncr_number)
+        if ncr is None:
+            # Clear, non-crashing error on the lookup page.
+            return render_template(
+                "repair.html", ncr=None,
+                error="No NCR found with number \"%s\". Check the number and try again." % ncr_number,
+            ), 404
+
+        line_items = db.get_line_items(conn, ncr["ncr_id"])
+        existing = db.get_repair(conn, ncr["ncr_id"])
+        root_causes = db.get_root_causes(conn)
+        dispositions = db.get_dispositions(conn)
+    finally:
+        conn.close()
+
+    # Opening an Open NCR moves it to 'In Repair'. Done after the read so the
+    # summary reflects the state the tech is acting on.
+    if existing is None and ncr["status"] == "Open":
+        db.mark_in_repair(ncr["ncr_id"])
+        ncr = dict(ncr)
+        ncr["status"] = "In Repair"
+
+    return render_template(
+        "repair.html",
+        ncr=ncr,
+        line_items=line_items,
+        existing=existing,
+        root_causes=root_causes,
+        dispositions=dispositions,
+    )
+
+
+@app.route("/repair/<ncr_number>", methods=["POST"])
+def repair_submit(ncr_number):
+    conn = db.get_connection()
+    try:
+        ncr = db.get_ncr_by_number(conn, ncr_number)
+        if ncr is None:
+            return render_template(
+                "repair.html", ncr=None,
+                error="No NCR found with number \"%s\"." % ncr_number,
+            ), 404
+        already = db.get_repair(conn, ncr["ncr_id"]) is not None
+        ncr_id = ncr["ncr_id"]
+    finally:
+        conn.close()
+
+    # Guard against a double submit (UNIQUE on ncr_repair.ncr_id).
+    if already:
+        return redirect(url_for("repair_detail", ncr_number=ncr_number))
+
+    f = request.form
+    passed_raw = _clean(f.get("repair_passed"))
+    repair = {
+        "date_updated": _clean(f.get("date_updated")),
+        "technician_init": (_clean(f.get("technician_init")) or "").upper()[:4] or None,
+        "root_cause_id": _to_int(f.get("root_cause_id")),
+        "root_cause_notes": _clean(f.get("root_cause_notes")),
+        "repair_passed": int(passed_raw) if passed_raw in ("0", "1") else None,
+        "disposition_code": _clean(f.get("disposition_code")),
+        "production_step": _clean(f.get("production_step")),
+    }
+    db.create_repair(ncr_id, repair)
+    return redirect(url_for("repair_detail", ncr_number=ncr_number))
+
+
 if __name__ == "__main__":
     # host=0.0.0.0 so other machines on the LAN can reach it.
     app.run(host="0.0.0.0", port=5000, debug=True)

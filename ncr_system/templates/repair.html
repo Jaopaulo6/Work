@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block title %}Repair Lookup{% endblock %}
+
+{% block content %}
+<h1>Repair Technician</h1>
+
+{# ---------- State 1: lookup form (no NCR loaded) ---------- #}
+{% if ncr is none %}
+<section class="card">
+    <h2>Look up an NCR</h2>
+    {% if error %}<p class="error-box">{{ error }}</p>{% endif %}
+    <form method="GET" action="{{ url_for('repair_lookup') }}" class="lookup-form">
+        <label class="field field-wide">
+            <span class="field-label">Enter NCR Number</span>
+            <input type="text" name="ncr_number" inputmode="numeric"
+                   autocomplete="off" autofocus placeholder="e.g. 212800" required>
+        </label>
+        <button type="submit" class="btn btn-submit">Search</button>
+    </form>
+</section>
+
+{% else %}
+{# ---------- Operator report (read-only) ---------- #}
+<section class="card">
+    <div class="record-head">
+        <h2>NCR {{ ncr.ncr_number }}</h2>
+        <span class="status-badge status-{{ ncr.status | replace(' ', '') | lower }}">{{ ncr.status }}</span>
+    </div>
+
+    <table class="slip-details">
+        <tr><th>Date</th><td>{{ ncr.date_created }}</td></tr>
+        <tr><th>Location</th><td>{{ ncr.location_description or ncr.location_code or '—' }}</td></tr>
+        <tr><th>Shop Order</th><td>{{ ncr.shop_order or '—' }}</td></tr>
+        <tr><th>Bin Number</th><td>{{ ncr.bin_number or '—' }}</td></tr>
+        <tr><th>Qty Affected</th><td>{{ ncr.qty_affected if ncr.qty_affected is not none else '—' }}</td></tr>
+        <tr><th>Source</th><td>{{ ncr.source_description or '—' }}</td></tr>
+        <tr><th>Operator</th><td>{{ ncr.operator_init }}</td></tr>
+    </table>
+
+    {% if ncr.notes %}
+    <h3 class="slip-section-title">Operator Notes</h3>
+    <p class="slip-notes">{{ ncr.notes }}</p>
+    {% endif %}
+
+    <h3 class="slip-section-title">Components Flagged</h3>
+    {% if line_items %}
+    <table class="slip-components">
+        <thead><tr><th>Component</th><th>Designator</th><th>Qty</th><th>NC Code</th></tr></thead>
+        <tbody>
+            {% for li in line_items %}
+            <tr>
+                <td>{{ li.component_number or '—' }}</td>
+                <td>{{ li.designator or '—' }}</td>
+                <td>{{ li.quantity if li.quantity is not none else '—' }}</td>
+                <td>{{ li.nc_code or '—' }}{% if li.nc_description %} — {{ li.nc_description }}{% endif %}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="muted">No components recorded.</p>
+    {% endif %}
+</section>
+
+{# ---------- State 3: repair already recorded (read-only) ---------- #}
+{% if existing %}
+<section class="card">
+    <div class="record-head">
+        <h2>Repair Record</h2>
+        <span class="status-badge status-closed">Closed</span>
+    </div>
+    <p class="muted">This NCR already has a repair record and is closed.</p>
+    <table class="slip-details">
+        <tr><th>Date Updated</th><td>{{ existing.date_updated }}</td></tr>
+        <tr><th>Technician</th><td>{{ existing.technician_init }}</td></tr>
+        <tr><th>Root Cause</th><td>{{ existing.root_cause_description or '—' }}</td></tr>
+        <tr><th>Root Cause Notes</th><td>{{ existing.root_cause_notes or '—' }}</td></tr>
+        <tr><th>Repair Passed</th><td>
+            {% if existing.repair_passed == 1 %}Pass{% elif existing.repair_passed == 0 %}Fail{% else %}—{% endif %}
+        </td></tr>
+        <tr><th>Disposition</th><td>{{ existing.disposition_description or '—' }}</td></tr>
+        <tr><th>Return to Step</th><td>{{ existing.production_step or '—' }}</td></tr>
+    </table>
+    <div class="slip-actions">
+        <a href="{{ url_for('repair_lookup') }}" class="btn btn-new">Look up another NCR</a>
+    </div>
+</section>
+
+{# ---------- State 2: editable repair form ---------- #}
+{% else %}
+<section class="card">
+    <h2>Add Repair Outcome</h2>
+    <form method="POST" action="{{ url_for('repair_submit', ncr_number=ncr.ncr_number) }}" class="ncr-form">
+        <input type="hidden" name="date_updated" id="date_updated">
+
+        <div class="field-grid">
+            <label class="field">
+                <span class="field-label">Technician Initials</span>
+                <input type="text" name="technician_init" maxlength="4" required
+                       autocomplete="off" class="uppercase" placeholder="ABC">
+            </label>
+
+            <label class="field">
+                <span class="field-label">Repair Passed</span>
+                <span class="radio-row">
+                    <label class="radio"><input type="radio" name="repair_passed" value="1"> Pass</label>
+                    <label class="radio"><input type="radio" name="repair_passed" value="0"> Fail</label>
+                </span>
+            </label>
+
+            <label class="field field-wide">
+                <span class="field-label">Root Cause</span>
+                <input type="text" class="rc-filter" placeholder="Type to filter… e.g. SOLDER" autocomplete="off">
+                <select name="root_cause_id" class="rc-select" size="6">
+                    <option value="">— Select root cause —</option>
+                    {% for rc in root_causes %}
+                    <option value="{{ rc.root_cause_id }}">{{ rc.root_cause_description }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+
+            <label class="field field-wide">
+                <span class="field-label">Root Cause Notes <span class="muted">(optional)</span></span>
+                <textarea name="root_cause_notes" rows="3"></textarea>
+            </label>
+
+            <label class="field">
+                <span class="field-label">Disposition</span>
+                <select name="disposition_code">
+                    <option value="">— Select disposition —</option>
+                    {% for d in dispositions %}
+                    <option value="{{ d.disposition_code }}">{{ d.disposition_code }} — {{ d.disposition_description }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+
+            <label class="field">
+                <span class="field-label">Return to Production Step</span>
+                <input type="text" name="production_step" autocomplete="off" placeholder="e.g. Hi-Pot, Final Test">
+            </label>
+        </div>
+
+        <button type="submit" class="btn btn-submit btn-submit-blue">Submit Repair Record</button>
+    </form>
+</section>
+{% endif %}
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    // Stamp today's date into the hidden date_updated field on the repair form.
+    var dateField = document.getElementById("date_updated");
+    if (dateField) {
+        var now = new Date();
+        var local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+        dateField.value = local.toISOString().slice(0, 10);
+    }
+
+    // Uppercase technician initials as typed.
+    var tech = document.querySelector('input[name="technician_init"]');
+    if (tech) {
+        tech.addEventListener("input", function () { this.value = this.value.toUpperCase(); });
+    }
+
+    // Live filter for the 58-item root-cause list.
+    var filter = document.querySelector(".rc-filter");
+    var select = document.querySelector(".rc-select");
+    if (filter && select) {
+        filter.addEventListener("input", function () {
+            var q = this.value.trim().toUpperCase();
+            Array.prototype.forEach.call(select.options, function (opt) {
+                if (opt.value === "") return;
+                opt.hidden = q !== "" && opt.text.toUpperCase().indexOf(q) === -1;
+            });
+        });
+    }
+})();
+</script>
+{% endblock %}

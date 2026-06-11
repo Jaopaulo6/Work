@@ -381,6 +381,22 @@ def get_nc_codes(conn):
     ).fetchall()
 
 
+def get_root_causes(conn):
+    """Active root causes ordered by id, for the (searchable) Root Cause dropdown."""
+    return conn.execute(
+        "SELECT root_cause_id, root_cause_description FROM ref_root_cause "
+        "WHERE validity = 'Active' ORDER BY root_cause_id"
+    ).fetchall()
+
+
+def get_dispositions(conn):
+    """Active dispositions ordered by code, for the Disposition dropdown."""
+    return conn.execute(
+        "SELECT disposition_code, disposition_description FROM ref_disposition "
+        "WHERE validity = 'Active' ORDER BY disposition_code"
+    ).fetchall()
+
+
 # ---------------------------------------------------------------------------
 # NCR creation
 # ---------------------------------------------------------------------------
@@ -461,6 +477,75 @@ def get_ncr_by_number(conn, ncr_number):
         """,
         (ncr_number,),
     ).fetchone()
+
+
+def get_repair(conn, ncr_id):
+    """Return the repair record (joined to root-cause/disposition descriptions)
+    for an NCR, or None if the tech hasn't filled it in yet."""
+    return conn.execute(
+        """
+        SELECT r.*, rc.root_cause_description, d.disposition_description
+        FROM ncr_repair r
+        LEFT JOIN ref_root_cause rc ON r.root_cause_id = rc.root_cause_id
+        LEFT JOIN ref_disposition d ON r.disposition_code = d.disposition_code
+        WHERE r.ncr_id = ?
+        """,
+        (ncr_id,),
+    ).fetchone()
+
+
+def mark_in_repair(ncr_id):
+    """Move an NCR from 'Open' to 'In Repair' when a tech opens it. Leaves
+    'In Repair' and 'Closed' untouched so we never walk the status backwards."""
+    conn = get_connection()
+    try:
+        conn.execute(
+            "UPDATE ncr SET status = 'In Repair' WHERE ncr_id = ? AND status = 'Open'",
+            (ncr_id,),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def create_repair(ncr_id, repair):
+    """Insert the repair record and close out the NCR in one transaction.
+
+    repair: dict with keys date_updated, technician_init, root_cause_id,
+            root_cause_notes, repair_passed, disposition_code, production_step.
+
+    Returns nothing. Raises sqlite3.IntegrityError if a repair already exists
+    for this NCR (ncr_repair.ncr_id is UNIQUE) — callers should guard first.
+    """
+    conn = get_connection()
+    try:
+        conn.execute(
+            """
+            INSERT INTO ncr_repair (
+                ncr_id, date_updated, technician_init, root_cause_id,
+                root_cause_notes, repair_passed, disposition_code, production_step
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                ncr_id,
+                repair.get("date_updated"),
+                repair.get("technician_init"),
+                repair.get("root_cause_id"),
+                repair.get("root_cause_notes"),
+                repair.get("repair_passed"),
+                repair.get("disposition_code"),
+                repair.get("production_step"),
+            ),
+        )
+        conn.execute(
+            "UPDATE ncr SET status = 'Closed' WHERE ncr_id = ?", (ncr_id,)
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 def get_line_items(conn, ncr_id):

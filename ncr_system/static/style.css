@@ -242,6 +242,54 @@ textarea:focus {
 }
 .slip-actions .btn { flex: 1; }
 
+/* ---- Repair page ---- */
+.record-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+.record-head h2 { margin: 0; }
+
+.status-badge {
+    display: inline-block;
+    padding: 0.3rem 0.8rem;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    border: 2px solid currentColor;
+}
+.status-open      { color: #8a6d00; background: #fff7e0; }
+.status-inrepair  { color: var(--blue); background: #e6f0fb; }
+.status-closed    { color: var(--green-dark); background: #e6f4ea; }
+
+.lookup-form .btn-submit { margin-top: 1rem; }
+
+.radio-row { display: flex; gap: 1rem; align-items: center; min-height: 48px; }
+.radio {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 1.15rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.radio input { width: 1.4rem; height: 1.4rem; min-height: auto; }
+
+.btn-submit-blue { background: var(--blue); }
+.btn-submit-blue:hover { background: #0d47a1; }
+
+.error-box {
+    background: #fdecea;
+    color: var(--red);
+    border: 1px solid var(--red);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
 /* ==========================================================================
    Print — the slip prints as a clean half-page bin tag.
    Goal: huge NCR number (written on the bin), plus date/location/bin/parts.
